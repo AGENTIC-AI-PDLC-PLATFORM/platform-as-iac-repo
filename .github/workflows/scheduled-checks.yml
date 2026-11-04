@@ -1,0 +1,91 @@
+# Scheduled controls (ADR "Zone isolation in IaC"):
+#   C12  daily drift plan of each root (weekdays); an open "Drift: <zone>" issue tracks the
+#        2-working-day limit
+#   C2   weekly IAM analysis in each project; an open "IAM: <zone>" issue reports grants to
+#        another zone's identity
+#   C1   negative test from a Build runner, on demand (design review #1, Day 22)
+name: scheduled-checks
+
+on:
+  schedule:
+    - cron: "17 5 * * 1-5" # C12
+    - cron: "47 5 * * 1" # C2
+  workflow_dispatch:
+    inputs:
+      check:
+        description: Check to run now
+        type: choice
+        options: [drift, iam, c1]
+
+permissions:
+  contents: read
+
+jobs:
+  drift:
+    name: C12 drift (${{ matrix.zone }})
+    if: github.event.schedule == '17 5 * * 1-5' || inputs.check == 'drift'
+    strategy:
+      fail-fast: false
+      matrix:
+        zone: [control-plane, build, run]
+    runs-on:
+      group: platform-as-iac-repo-${{ matrix.zone }}
+      labels: ["zone-${{ matrix.zone }}"]
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      id-token: write
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Plan credentials from this zone's token broker
+        run: scripts/gcp-token.sh plan
+      - name: Module downloads use this run's token
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
+      - name: Drift plan and issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: scripts/drift.sh "${{ matrix.zone }}"
+
+  iam:
+    name: C2 IAM analysis (${{ matrix.zone }})
+    if: github.event.schedule == '47 5 * * 1' || inputs.check == 'iam'
+    strategy:
+      fail-fast: false
+      matrix:
+        zone: [control-plane, build, run]
+    runs-on:
+      group: platform-as-iac-repo-${{ matrix.zone }}
+      labels: ["zone-${{ matrix.zone }}"]
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Plan credentials from this zone's token broker
+        run: scripts/gcp-token.sh plan
+      - name: Grants to identities outside the zone
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: scripts/c2-iam-scan.sh "${{ matrix.zone }}"
+
+  c1:
+    name: C1 negative test from a Build runner
+    if: inputs.check == 'c1'
+    runs-on:
+      group: platform-as-iac-repo-build
+      labels: [zone-build]
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Build's own plan credentials
+        run: scripts/gcp-token.sh plan
+      - name: Every attempt to get or use a Run credential is refused
+        run: scripts/c1-negative-test.sh

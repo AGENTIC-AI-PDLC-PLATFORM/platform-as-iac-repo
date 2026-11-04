@@ -1,0 +1,22 @@
+# Terraform working files
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+plan.bin
+plan.json
+plan.txt
+backend_override.tf
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Bootstrap inputs name people and billing: kept out of Git (terraform.tfvars.example is the template)
+bootstrap/terraform.tfvars
+
+# Local tooling
+.terraformrc
+terraform.rc
+__pycache__/

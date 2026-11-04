@@ -1,0 +1,7 @@
+self-hosted-runner:
+  # Labels of the zone runners (bootstrap/zone/runners.tf), in runner groups platform-as-iac-repo-<zone>.
+  labels:
+    - platform-as-iac-repo
+    - zone-control-plane
+    - zone-build
+    - zone-run

@@ -1,0 +1,9 @@
+# After the first apply: copy this file to backend.tf, put in the control-plane state bucket
+# (output bootstrap_backend_hcl), run `terraform init -migrate-state`, and commit backend.tf.
+# Only the break-glass group can read this prefix (bootstrap/zone/state.tf).
+terraform {
+  backend "gcs" {
+    bucket = "example-pdlc-control-tfstate"
+    prefix = "bootstrap"
+  }
+}

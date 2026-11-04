@@ -1,0 +1,153 @@
+# Pull request (ADR "Zone isolation in IaC"): format, validate, lint; plan each affected root on
+# that zone's runners with that zone's read-only identity; run policy/ on the plan JSON; post the
+# plan to the pull request. Required status check: checks-complete.
+name: pull-request
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pull-request-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    name: affected roots
+    runs-on: ubuntu-latest
+    outputs:
+      zones: ${{ steps.roots.outputs.zones }}
+      bootstrap: ${{ steps.roots.outputs.bootstrap }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - id: roots
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: scripts/changed-roots.sh plan "$BASE" "$HEAD" | tee -a "$GITHUB_OUTPUT"
+
+  static:
+    name: static checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # release tags, for C10
+      - name: Terraform version
+        run: echo "TF_VERSION=$(cat .terraform-version)" >> "$GITHUB_ENV"
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+      - name: Pinned tools (checksums verified)
+        run: scripts/install-ci-tools.sh
+      - name: Module downloads use this run's token
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
+      - name: Format
+        run: terraform fmt -check -recursive -diff
+      - name: Lint Terraform
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          tflint --init --config "$PWD/.tflint.hcl"
+          tflint --recursive --config "$PWD/.tflint.hcl" --format compact
+      - name: Validate; providers locked (C9)
+        run: scripts/validate-all.sh
+      - name: Lint workflows and scripts
+        run: |
+          actionlint
+          shellcheck scripts/*.sh bootstrap/zone/files/runner-startup.sh
+      - name: Policy tests (C11)
+        run: |
+          opa check --strict policy
+          opa test policy
+          scripts/check-fixtures.sh
+      - name: Token broker tests (C1)
+        run: |
+          python3 -m pip install --quiet --disable-pip-version-check pyjwt==2.15.1 cryptography==50.0.2
+          python3 -m unittest discover -s bootstrap/zone/files -p '*_test.py' -v
+      - name: Data-plane parity (C10)
+        run: scripts/check-c10.sh
+      - name: No static credentials (C7)
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          scripts/check-no-static-credentials.sh
+          gitleaks git --no-banner --redact --log-opts="$BASE..HEAD" .
+
+  plan:
+    name: plan (${{ matrix.zone }})
+    needs: changes
+    if: needs.changes.outputs.zones != '[]'
+    strategy:
+      fail-fast: false
+      matrix:
+        zone: ${{ fromJSON(needs.changes.outputs.zones) }}
+    runs-on:
+      group: platform-as-iac-repo-${{ matrix.zone }}
+      labels: ["zone-${{ matrix.zone }}"]
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      id-token: write # GitHub OIDC token, presented to this zone's token broker
+      pull-requests: write # plan comment
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Plan credentials from this zone's token broker
+        run: scripts/gcp-token.sh plan
+      - name: Module downloads use this run's token
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
+      - name: Plan
+        id: plan
+        run: scripts/tf-plan.sh "${{ matrix.zone }}" plan
+      - name: Checks on the plan JSON (C1 C3 C4 C5 C9)
+        run: scripts/check-plan.sh "${{ matrix.zone }}" "zones/${{ matrix.zone }}/plan.json"
+      - name: Post the plan to the pull request
+        if: ${{ !cancelled() && steps.plan.outcome == 'success' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: scripts/post-plan.sh "${{ matrix.zone }}"
+
+  c1-from-build:
+    name: C1 negative test from a Build runner
+    needs: changes
+    if: needs.changes.outputs.bootstrap == 'true'
+    runs-on:
+      group: platform-as-iac-repo-build
+      labels: [zone-build]
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Build's own plan credentials
+        run: scripts/gcp-token.sh plan
+      - name: Every attempt to get or use a Run credential is refused
+        run: scripts/c1-negative-test.sh
+
+  checks-complete:
+    name: checks-complete
+    if: always()
+    needs: [changes, static, plan, c1-from-build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: All required checks passed or were not needed
+        env:
+          RESULTS: ${{ toJSON(needs.*.result) }}
+        run: |
+          echo "$RESULTS"
+          if jq -e 'any(.[]; . == "failure" or . == "cancelled")' <<< "$RESULTS" > /dev/null; then
+            exit 1
+          fi

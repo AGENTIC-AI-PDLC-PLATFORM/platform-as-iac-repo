@@ -1,0 +1,137 @@
+# Merge to main (ADR "Zone isolation in IaC"): apply each affected root on that zone's runners with
+# that zone's short-lived apply identity, in order: control plane, then Build, then Run. The token
+# broker gives apply credentials only to this workflow, on main, in the zone's protected environment;
+# the Run environment waits for a second approver.
+name: apply
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      zones:
+        description: Roots to apply, comma-separated
+        required: true
+        default: control-plane,build,run
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apply
+  cancel-in-progress: false
+
+jobs:
+  changes:
+    name: affected roots
+    runs-on: ubuntu-latest
+    outputs:
+      control-plane: ${{ steps.roots.outputs.control-plane }}
+      build: ${{ steps.roots.outputs.build }}
+      run: ${{ steps.roots.outputs.run }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - id: roots
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          ZONES_INPUT: ${{ inputs.zones }}
+        run: |
+          if [[ $EVENT == workflow_dispatch ]]; then
+            for zone in control-plane build run; do
+              if [[ ",$ZONES_INPUT," == *",$zone,"* ]]; then echo "$zone=true"; else echo "$zone=false"; fi
+            done | tee -a "$GITHUB_OUTPUT"
+          else
+            scripts/changed-roots.sh apply "$BEFORE" "$GITHUB_SHA" | tee -a "$GITHUB_OUTPUT"
+          fi
+
+  control-plane:
+    name: apply (control-plane)
+    needs: changes
+    if: needs.changes.outputs.control-plane == 'true'
+    environment: control-plane
+    runs-on:
+      group: platform-as-iac-repo-control-plane
+      labels: [zone-control-plane]
+    timeout-minutes: 55
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Apply credentials from this zone's token broker
+        run: scripts/gcp-token.sh apply
+      - name: Module downloads use this run's token
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
+      - name: Plan
+        run: scripts/tf-plan.sh control-plane apply
+      - name: Checks on the plan JSON (C1 C3 C4 C9)
+        run: scripts/check-plan.sh control-plane zones/control-plane/plan.json
+      - name: Apply
+        run: terraform -chdir=zones/control-plane apply -input=false plan.bin
+      - name: Published outputs match published/
+        run: scripts/verify-published.sh
+      - name: Reachability (C5)
+        run: scripts/reachability.sh control-plane
+
+  build:
+    name: apply (build)
+    needs: [changes, control-plane]
+    if: ${{ !cancelled() && needs.changes.outputs.build == 'true' && needs.control-plane.result != 'failure' }}
+    environment: build
+    runs-on:
+      group: platform-as-iac-repo-build
+      labels: [zone-build]
+    timeout-minutes: 55
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Apply credentials from this zone's token broker
+        run: scripts/gcp-token.sh apply
+      - name: Module downloads use this run's token
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
+      - name: Plan
+        run: scripts/tf-plan.sh build apply
+      - name: Checks on the plan JSON (C1 C3 C4 C5 C9)
+        run: scripts/check-plan.sh build zones/build/plan.json
+      - name: Apply
+        run: terraform -chdir=zones/build apply -input=false plan.bin
+      - name: Reachability (C3 C5)
+        run: scripts/reachability.sh build
+
+  run:
+    name: apply (run)
+    needs: [changes, control-plane, build]
+    if: ${{ !cancelled() && needs.changes.outputs.run == 'true' && needs.control-plane.result != 'failure' && needs.build.result != 'failure' }}
+    environment: run # second approver
+    runs-on:
+      group: platform-as-iac-repo-run
+      labels: [zone-run]
+    timeout-minutes: 55
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Apply credentials from this zone's token broker
+        run: scripts/gcp-token.sh apply
+      - name: Module downloads use this run's token
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
+      - name: Plan
+        run: scripts/tf-plan.sh run apply
+      - name: Checks on the plan JSON (C1 C3 C4 C5 C9)
+        run: scripts/check-plan.sh run zones/run/plan.json
+      - name: Apply
+        run: terraform -chdir=zones/run apply -input=false plan.bin
+      - name: Reachability (C3 C5)
+        run: scripts/reachability.sh run

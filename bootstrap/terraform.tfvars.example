@@ -1,0 +1,30 @@
+# Copy to terraform.tfvars (not committed: it names people and billing) and fill in.
+
+projects = {
+  control-plane = { project_id = "example-pdlc-control", name = "PDLC control plane" }
+  build         = { project_id = "example-pdlc-build", name = "PDLC Build zone - non-prod" }
+  run           = { project_id = "example-pdlc-run", name = "PDLC Run zone - prod" }
+}
+
+create_projects  = true
+folder_id        = "000000000000"
+billing_account  = "000000-000000-000000"
+quota_project_id = "example-admin-seed"
+region           = "europe-west9"
+cost_center      = "agentic-pdlc"
+
+break_glass_group     = "group:pdlc-break-glass@example.com"
+security_alert_emails = ["coe-security@example.com"]
+
+github = {
+  organization     = "platform-team"
+  repository       = "platform-as-iac-repo"
+  app_id           = "000000"
+  installation_id  = "00000000"
+  runner_group_ids = { control-plane = 0, build = 0, run = 0 } # from scripts/configure-github.sh
+}
+
+dlp_proxy = {
+  service_attachment = "projects/example-network-hub/regions/europe-west9/serviceAttachments/dlp-reverse-proxy"
+  port               = 3128
+}

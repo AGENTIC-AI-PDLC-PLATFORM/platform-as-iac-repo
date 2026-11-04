@@ -1,0 +1,21 @@
+# CODEOWNERS — last matching pattern wins
+# platform-as-iac-repo (ADR "Zone isolation in IaC"). Each owner team is created by create-teams.sh with its
+# own write grant on platform-as-iac-repo, or GitHub ignores it. GitHub accepts one approval from any owner
+# listed on a line; the Run apply adds the second person (environment "run").
+
+# Everything not listed below: the CoE platform lead (owner of the ADR)
+*                       @platform-team/coe-platform-lead
+
+# From the ADR
+/zones/control-plane/   @platform-team/coe-squad-a-lead
+/zones/run/             @platform-team/coe-squad-b-lead @platform-team/coe-security
+/bootstrap/             @platform-team/coe-squad-b-lead @platform-team/coe-security
+
+# Not in the ADR. These files decide what Build and Run receive (published/), the checks that prove
+# C1-C12 (policy/), and what the pipelines run with zone credentials (.github/, scripts/): a change
+# there reaches Run as surely as a change in zones/run/.
+/published/             @platform-team/coe-squad-a-lead
+/policy/                @platform-team/coe-security
+/.github/               @platform-team/coe-squad-b-lead @platform-team/coe-security
+/scripts/               @platform-team/coe-squad-b-lead @platform-team/coe-security
+/CODEOWNERS             @platform-team/coe-security
