@@ -1,9 +1,10 @@
 # platform-as-iac-repo
 
-Infrastructure as code of the Agentic PDLC PaaS on Google Cloud, laid out as decided in the ADR
-**"Zone isolation in IaC: one repository with one root, state backend and pipeline identity per
-zone"** (design-authority repository). Every zone has its own root, state backend, identity and
-runner pool, so this repository can never become a second Build → Run crossing (ADR-001 to ADR-003).
+Infrastructure as code of the Agentic PDLC PaaS on Google Cloud, laid out as decided in **ADR-002
+"Control plane once, data planes per zone and sovereign region, each zone provisioned in isolation"**
+(design-authority repository: `decisions/002-control-plane-once-data-planes-per-zone-in-isolation.md`).
+Every zone has its own root, state backend, identity and runner pool, so this repository can never
+become a second Build → Run crossing (ADR-001 to ADR-003).
 
 ```text
 platform-as-iac-repo/
@@ -24,9 +25,9 @@ platform-as-iac-repo/
 └── .github/workflows/       # plan on pull request, apply on merge, per zone; scheduled checks
 ```
 
-## How the ADR maps to Google Cloud
+## How ADR-002 maps to Google Cloud
 
-| ADR | Here |
+| ADR-002 | Here |
 |---|---|
 | Three accounts | Three projects: control plane, Build (non-prod), Run (prod) |
 | Organisation policies, no public ingress, central logging, tags | `modules/account-baseline` (project-level org policies, audit-log sink to a central bucket), labels on every resource |
@@ -55,10 +56,13 @@ platform-as-iac-repo/
 | C10 Run at most one data-plane release behind Build | `policy/c10_data_plane_parity.rego`; `scripts/check-c10.sh` | Every pull request |
 | C11 Every check fails on a violating fixture | `policy/*_test.rego`, `policy/fixtures/`; `scripts/check-fixtures.sh` | Every pull request (`opa test`) |
 | C12 No drift unresolved after 2 working days | `scripts/drift.sh` | Daily (weekdays), issue `Drift: <zone>` |
+| C13 Zone credentials only to jobs on that zone's own runners | `bootstrap/zone/files/broker.py`: listens on 127.0.0.1 only and refuses tokens from jobs not on a self-hosted runner; `broker_test.py` | Broker tests on every pull request; the broker's decision log in Cloud Logging |
+| C14 Private repository; each runner group admits this repository only, no public repository | `scripts/configure-github.sh`: stops unless the repository is private, then restricts each runner group to it | Each run of the script; settings export at design review #1 (Day 22) |
 
 ## First-time setup
 
-1. **Repository.** Create `platform-as-iac-repo` in the organization, replace the placeholders, push:
+1. **Repository.** Create `platform-as-iac-repo` in the organization as a private repository (C14),
+   replace the placeholders, push:
    `platform-team` (organization slug, in module sources and CODEOWNERS), `example-pdlc-*` (project
    IDs, in `bootstrap/terraform.tfvars`, `zones/*/terraform.tfvars`, `zones/*/backend.hcl`,
    `published/`), the DLP reverse proxy's service attachment and port, and the IP ranges.
@@ -70,8 +74,9 @@ platform-as-iac-repo/
    `git tag account-baseline-v0.1.0 && git tag network-v0.1.0 && git tag data-plane-v0.1.0 && git push --tags`
 5. **GitHub App** for runner registration: organization permission *Self-hosted runners: read and
    write*, nothing else; install it on the organization; generate a private key.
-6. **GitHub settings.** `ORG=<org> bash scripts/configure-github.sh`: runner groups (note their IDs),
-   environments, rulesets on `main` and on release tags.
+6. **GitHub settings.** `ORG=<org> bash scripts/configure-github.sh`: stops unless the repository is
+   private (C14), then runner groups (note their IDs), environments, rulesets on `main` and on
+   release tags.
 7. **Bootstrap**, Day 16, by the two named people: [bootstrap/README.md](bootstrap/README.md).
 8. **First pull request** touching `zones/`: each zone is planned on its own runners; merge applies
    control plane, then Build, then Run (after the second approval).
@@ -94,7 +99,7 @@ platform-as-iac-repo/
 - Terraform's checksum on the runners comes from HashiCorp's `SHA256SUMS` at boot until
   `runner.tools.terraform_sha256` is pinned in `bootstrap/terraform.tfvars`.
 - A pull request runs its own version of the workflows on the zone runners and gets that zone's
-  read-only plan credentials: the ADR accepts that planning Run needs read access in Run. Apply
+  read-only plan credentials: ADR-002 accepts that planning Run needs read access in Run. Apply
   credentials go only to the apply workflow from `main`.
 - On lines with two owner teams, GitHub accepts one approval from either; for Run, the
   environment approval adds the second person.

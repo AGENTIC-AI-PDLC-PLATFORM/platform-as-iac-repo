@@ -1,4 +1,4 @@
-# Merge to main (ADR "Zone isolation in IaC"): apply each affected root on that zone's runners with
+# Merge to main (ADR-002): apply each affected root on that zone's runners with
 # that zone's short-lived apply identity, in order: control plane, then Build, then Run. The token
 # broker gives apply credentials only to this workflow, on main, in the zone's protected environment;
 # the Run environment waits for a second approver.

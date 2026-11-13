@@ -1,5 +1,5 @@
 variable "projects" {
-  description = "The three zone projects (the ADR's accounts), keyed by zone."
+  description = "The three zone projects (ADR-002's accounts), keyed by zone."
   type = map(object({
     project_id = string
     name       = string

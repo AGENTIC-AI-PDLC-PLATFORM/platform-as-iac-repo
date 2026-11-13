@@ -65,7 +65,7 @@ resource "google_monitoring_alert_policy" "c8_change_outside_pipeline" {
   documentation {
     mime_type = "text/markdown"
     content   = <<-EOT
-      C8 (ADR "Zone isolation in IaC"): something in the ${var.zone} project was changed by a principal
+      C8 (ADR-002): something in the ${var.zone} project was changed by a principal
       other than the pipeline's apply identity. If it was a recorded break-glass action, link the record;
       otherwise treat it as an incident and bring the change back under the pipeline.
     EOT

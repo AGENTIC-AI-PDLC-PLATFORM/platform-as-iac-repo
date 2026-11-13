@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Zone token broker of the platform-as-iac-repo runners (ADR control C1).
+"""Zone token broker of the platform-as-iac-repo runners (ADR-002 controls C1 and C13).
 
 Runs as root on every ephemeral runner VM and listens on 127.0.0.1 only. A job sends its GitHub
 Actions OIDC token and asks for "plan" or "apply". If the token passes the checks for that role,

@@ -1,4 +1,4 @@
-# Pull request (ADR "Zone isolation in IaC"): format, validate, lint; plan each affected root on
+# Pull request (ADR-002): format, validate, lint; plan each affected root on
 # that zone's runners with that zone's read-only identity; run policy/ on the plan JSON; post the
 # plan to the pull request. Required status check: checks-complete.
 name: pull-request
@@ -70,9 +70,9 @@ jobs:
           opa check --strict policy
           opa test policy
           scripts/check-fixtures.sh
-      - name: Token broker tests (C1)
+      - name: Token broker tests (C1, C13)
         run: |
-          python3 -m pip install --quiet --disable-pip-version-check -r requirements.txt
+          python3 -m pip install --quiet --disable-pip-version-check pyjwt==2.15.1 cryptography==50.0.2
           python3 -m unittest discover -s bootstrap/zone/files -p '*_test.py' -v
       - name: Data-plane parity (C10)
         run: scripts/check-c10.sh

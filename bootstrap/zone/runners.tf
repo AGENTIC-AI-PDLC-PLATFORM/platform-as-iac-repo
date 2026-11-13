@@ -1,4 +1,4 @@
-# The zone's runner pool (ADR: plan and apply run on runners inside the zone). Each VM:
+# The zone's runner pool (ADR-002: plan and apply run on runners inside the zone). Each VM:
 #   - sits in a runner network with no internet route; GitHub, HashiCorp and Debian are reached
 #     through the company DLP reverse proxy (C5);
 #   - registers one just-in-time GitHub runner in this zone's runner group, runs one job, stops;
@@ -7,7 +7,7 @@
 #     only from the local token broker (files/broker.py), which checks the job's GitHub OIDC token.
 
 module "runner_network" {
-  source = "git::https://github.com/AGENTIC-AI-PDLC-PLATFORM/platform-as-iac-repo.git//modules/network?ref=network-v0.1.0"
+  source = "git::https://github.com/platform-team/platform-as-iac-repo.git//modules/network?ref=network-v0.1.0"
 
   project_id      = var.project_id
   name            = "iac-runners"

@@ -1,7 +1,7 @@
 # bootstrap/ — stage 0
 
 Applied **once, on Day 16, by two named people, from the control-plane project**; then its
-credentials are locked as break-glass (ADR "Zone isolation in IaC"). No pipeline can plan or apply
+credentials are locked as break-glass (ADR-002). No pipeline can plan or apply
 it: it creates the very identities and runners the pipelines use. The CISO delegate keeps the
 break-glass record and checks it at the risk and security review.
 

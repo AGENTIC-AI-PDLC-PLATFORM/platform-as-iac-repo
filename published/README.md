@@ -1,6 +1,6 @@
 # published/
 
-Control-plane outputs that Build and Run need, published as non-secret parameters (ADR: "no zone
+Control-plane outputs that Build and Run need, published as non-secret parameters (ADR-002: "no zone
 reads another zone's state"). `zones/build` and `zones/run` read `control-plane.tfvars.json` with
 `-var-file`; their `control_plane_services` variable has no default, so a plan without this file
 fails instead of removing the endpoints.

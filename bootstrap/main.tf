@@ -1,4 +1,4 @@
-# Stage 0 (ADR "Zone isolation in IaC"): applied once on Day 16 by two named people from the
+# Stage 0 (ADR-002): applied once on Day 16 by two named people from the
 # control-plane project, then locked as break-glass. Creates, per zone project: the guardrails,
 # the state backend, the plan/apply/runner identities and the runner pool. Nothing here gives a
 # zone's identity any permission outside its own project (C2), and no path joins Build and Run.
@@ -89,7 +89,7 @@ resource "google_logging_project_bucket_config" "audit" {
 # Guardrails, then APIs, in each project -----------------------------------------------------------
 
 module "baseline" {
-  source   = "git::https://github.com/AGENTIC-AI-PDLC-PLATFORM/platform-as-iac-repo.git//modules/account-baseline?ref=account-baseline-v0.1.0"
+  source   = "git::https://github.com/platform-team/platform-as-iac-repo.git//modules/account-baseline?ref=account-baseline-v0.1.0"
   for_each = var.projects
 
   project_id                         = local.project_ids[each.key]

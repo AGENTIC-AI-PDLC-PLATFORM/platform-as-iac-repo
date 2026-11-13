@@ -1,6 +1,6 @@
 # policy/
 
-Plan checks of the ADR's Confirmation table, in Rego (OPA 1.x). They belong to this repository,
+Plan checks of ADR-002's Confirmation table, in Rego (OPA 1.x). They belong to this repository,
 not to the policy-source repository (ADR-007).
 
 | File | Control | Input | Runs on |

@@ -4,7 +4,7 @@
 # runners can obtain its credentials (C1). Every apply waits for a second approver.
 
 module "network" {
-  source = "git::https://github.com/AGENTIC-AI-PDLC-PLATFORM/platform-as-iac-repo.git//modules/network?ref=network-v0.1.0"
+  source = "git::https://github.com/platform-team/platform-as-iac-repo.git//modules/network?ref=network-v0.1.0"
 
   project_id                = var.project_id
   name                      = "run"
@@ -17,7 +17,7 @@ module "network" {
 
 # Same module and release line as zones/build; Run follows Build, at most one release behind (C10).
 module "data_plane" {
-  source = "git::https://github.com/AGENTIC-AI-PDLC-PLATFORM/platform-as-iac-repo.git//modules/data-plane?ref=data-plane-v0.1.0"
+  source = "git::https://github.com/platform-team/platform-as-iac-repo.git//modules/data-plane?ref=data-plane-v0.1.0"
 
   zone                    = "run"
   project_id              = var.project_id

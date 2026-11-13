@@ -1,4 +1,4 @@
-# Scheduled controls (ADR "Zone isolation in IaC"):
+# Scheduled controls (ADR-002):
 #   C12  daily drift plan of each root (weekdays); an open "Drift: <zone>" issue tracks the
 #        2-working-day limit
 #   C2   weekly IAM analysis in each project; an open "IAM: <zone>" issue reports grants to

@@ -6,7 +6,6 @@ crash.log
 crash.*.log
 plan.bin
 plan.json
-!policy/fixtures/*/plan.json
 plan.txt
 backend_override.tf
 override.tf

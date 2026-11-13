@@ -17,7 +17,7 @@ break_glass_group     = "group:pdlc-break-glass@example.com"
 security_alert_emails = ["coe-security@example.com"]
 
 github = {
-  organization     = "AGENTIC-AI-PDLC-PLATFORM"
+  organization     = "platform-team"
   repository       = "platform-as-iac-repo"
   app_id           = "000000"
   installation_id  = "00000000"
