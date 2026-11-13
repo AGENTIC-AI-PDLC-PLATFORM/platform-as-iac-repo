@@ -4,7 +4,7 @@
 # endpoint leads to the Run zone (ADR-003).
 
 module "network" {
-  source = "git::https://github.com/platform-team/platform-as-iac-repo.git//modules/network?ref=network-v0.1.0"
+  source = "git::https://github.com/AGENTIC-AI-PDLC-PLATFORM/platform-as-iac-repo.git//modules/network?ref=network-v0.1.0"
 
   project_id                = var.project_id
   name                      = "build"
@@ -17,7 +17,7 @@ module "network" {
 
 # Same module and release line as zones/run; Build moves first (C10).
 module "data_plane" {
-  source = "git::https://github.com/platform-team/platform-as-iac-repo.git//modules/data-plane?ref=data-plane-v0.1.0"
+  source = "git::https://github.com/AGENTIC-AI-PDLC-PLATFORM/platform-as-iac-repo.git//modules/data-plane?ref=data-plane-v0.1.0"
 
   zone                    = "build"
   project_id              = var.project_id

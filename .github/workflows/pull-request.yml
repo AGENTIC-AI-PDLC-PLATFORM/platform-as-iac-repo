@@ -72,7 +72,7 @@ jobs:
           scripts/check-fixtures.sh
       - name: Token broker tests (C1)
         run: |
-          python3 -m pip install --quiet --disable-pip-version-check pyjwt==2.15.1 cryptography==50.0.2
+          python3 -m pip install --quiet --disable-pip-version-check -r requirements.txt
           python3 -m unittest discover -s bootstrap/zone/files -p '*_test.py' -v
       - name: Data-plane parity (C10)
         run: scripts/check-c10.sh

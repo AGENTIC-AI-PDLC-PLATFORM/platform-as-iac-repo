@@ -1,0 +1,477 @@
+{
+ "configuration": {
+  "root_module": {
+   "module_calls": {
+    "data_plane": {
+     "module": {},
+     "source": "git::https://github.com/platform-team/platform-as-iac-repo.git//modules/data-plane?ref=data-plane-v0.1.0"
+    },
+    "network": {
+     "module": {
+      "resources": [
+       {
+        "address": "google_compute_address.endpoint",
+        "mode": "managed",
+        "name": "endpoint",
+        "type": "google_compute_address"
+       },
+       {
+        "address": "google_compute_firewall.allow_egress_google_apis",
+        "mode": "managed",
+        "name": "allow_egress_google_apis",
+        "type": "google_compute_firewall"
+       },
+       {
+        "address": "google_compute_firewall.allow_egress_internal",
+        "mode": "managed",
+        "name": "allow_egress_internal",
+        "type": "google_compute_firewall"
+       },
+       {
+        "address": "google_compute_firewall.allow_ingress_internal",
+        "mode": "managed",
+        "name": "allow_ingress_internal",
+        "type": "google_compute_firewall"
+       },
+       {
+        "address": "google_compute_firewall.deny_all_egress",
+        "mode": "managed",
+        "name": "deny_all_egress",
+        "type": "google_compute_firewall"
+       },
+       {
+        "address": "google_compute_forwarding_rule.endpoint",
+        "mode": "managed",
+        "name": "endpoint",
+        "type": "google_compute_forwarding_rule"
+       },
+       {
+        "address": "google_compute_network.this",
+        "mode": "managed",
+        "name": "this",
+        "type": "google_compute_network"
+       },
+       {
+        "address": "google_compute_route.google_apis",
+        "mode": "managed",
+        "name": "google_apis",
+        "type": "google_compute_route"
+       },
+       {
+        "address": "google_compute_subnetwork.this",
+        "mode": "managed",
+        "name": "this",
+        "type": "google_compute_subnetwork"
+       },
+       {
+        "address": "google_dns_managed_zone.google_apis",
+        "mode": "managed",
+        "name": "google_apis",
+        "type": "google_dns_managed_zone"
+       },
+       {
+        "address": "google_dns_managed_zone.internal",
+        "mode": "managed",
+        "name": "internal",
+        "type": "google_dns_managed_zone"
+       },
+       {
+        "address": "google_dns_record_set.endpoint",
+        "mode": "managed",
+        "name": "endpoint",
+        "type": "google_dns_record_set"
+       },
+       {
+        "address": "google_dns_record_set.google_apis_vip",
+        "mode": "managed",
+        "name": "google_apis_vip",
+        "type": "google_dns_record_set"
+       },
+       {
+        "address": "google_dns_record_set.google_apis_wildcard",
+        "mode": "managed",
+        "name": "google_apis_wildcard",
+        "type": "google_dns_record_set"
+       }
+      ]
+     },
+     "source": "git::https://github.com/platform-team/platform-as-iac-repo.git//modules/network?ref=network-v0.1.0"
+    }
+   }
+  }
+ },
+ "format_version": "1.2",
+ "resource_changes": [
+  {
+   "address": "module.network.google_compute_address.endpoint[\"cp-probe\"]",
+   "change": {
+    "actions": [
+     "create"
+    ],
+    "after": {
+     "address_type": "INTERNAL",
+     "deletion_policy": "DELETE",
+     "description": null,
+     "effective_labels": {
+      "cost-center": "agentic-pdlc",
+      "goog-terraform-provisioned": "true",
+      "managed-by": "platform-as-iac-repo",
+      "zone": "run"
+     },
+     "ip_collection": null,
+     "ip_version": null,
+     "ipv6_endpoint_type": null,
+     "labels": null,
+     "name": "run-cp-probe",
+     "network": null,
+     "project": "example-pdlc-run",
+     "region": "europe-west9",
+     "terraform_labels": {
+      "cost-center": "agentic-pdlc",
+      "goog-terraform-provisioned": "true",
+      "managed-by": "platform-as-iac-repo",
+      "zone": "run"
+     },
+     "timeouts": null
+    },
+    "after_unknown": {
+     "address": true,
+     "address_id": true,
+     "creation_timestamp": true,
+     "effective_labels": {},
+     "id": true,
+     "label_fingerprint": true,
+     "network_tier": true,
+     "prefix_length": true,
+     "purpose": true,
+     "self_link": true,
+     "subnetwork": true,
+     "terraform_labels": {},
+     "users": true
+    }
+   },
+   "index": "cp-probe",
+   "mode": "managed",
+   "module_address": "module.network",
+   "name": "endpoint",
+   "type": "google_compute_address"
+  },
+  {
+   "address": "module.network.google_compute_address.endpoint[\"dlp-proxy\"]",
+   "change": {
+    "actions": [
+     "create"
+    ],
+    "after": {
+     "address_type": "INTERNAL",
+     "deletion_policy": "DELETE",
+     "description": null,
+     "effective_labels": {
+      "cost-center": "agentic-pdlc",
+      "goog-terraform-provisioned": "true",
+      "managed-by": "platform-as-iac-repo",
+      "zone": "run"
+     },
+     "ip_collection": null,
+     "ip_version": null,
+     "ipv6_endpoint_type": null,
+     "labels": null,
+     "name": "run-dlp-proxy",
+     "network": null,
+     "project": "example-pdlc-run",
+     "region": "europe-west9",
+     "terraform_labels": {
+      "cost-center": "agentic-pdlc",
+      "goog-terraform-provisioned": "true",
+      "managed-by": "platform-as-iac-repo",
+      "zone": "run"
+     },
+     "timeouts": null
+    },
+    "after_unknown": {
+     "address": true,
+     "address_id": true,
+     "creation_timestamp": true,
+     "effective_labels": {},
+     "id": true,
+     "label_fingerprint": true,
+     "network_tier": true,
+     "prefix_length": true,
+     "purpose": true,
+     "self_link": true,
+     "subnetwork": true,
+     "terraform_labels": {},
+     "users": true
+    }
+   },
+   "index": "dlp-proxy",
+   "mode": "managed",
+   "module_address": "module.network",
+   "name": "endpoint",
+   "type": "google_compute_address"
+  },
+  {
+   "address": "module.network.google_compute_forwarding_rule.endpoint[\"cp-probe\"]",
+   "change": {
+    "actions": [
+     "create"
+    ],
+    "after": {
+     "all_ports": null,
+     "allow_global_access": null,
+     "allow_psc_global_access": null,
+     "backend_service": null,
+     "deletion_policy": "DELETE",
+     "description": null,
+     "effective_labels": {
+      "cost-center": "agentic-pdlc",
+      "managed-by": "platform-as-iac-repo",
+      "zone": "run"
+     },
+     "ip_collection": null,
+     "is_mirroring_collector": null,
+     "labels": null,
+     "load_balancing_scheme": "",
+     "name": "run-cp-probe",
+     "no_automate_dns_zone": null,
+     "ports": null,
+     "project": "example-pdlc-run",
+     "recreate_closed_psc": false,
+     "region": "europe-west9",
+     "service_label": null,
+     "source_ip_ranges": null,
+     "target": "projects/example-pdlc-control/regions/europe-west9/serviceAttachments/probe",
+     "terraform_labels": {
+      "cost-center": "agentic-pdlc",
+      "managed-by": "platform-as-iac-repo",
+      "zone": "run"
+     },
+     "timeouts": null
+    },
+    "after_unknown": {
+     "base_forwarding_rule": true,
+     "creation_timestamp": true,
+     "effective_labels": {},
+     "forwarding_rule_id": true,
+     "id": true,
+     "ip_address": true,
+     "ip_protocol": true,
+     "ip_version": true,
+     "label_fingerprint": true,
+     "network": true,
+     "network_tier": true,
+     "port_range": true,
+     "psc_connection_id": true,
+     "psc_connection_status": true,
+     "self_link": true,
+     "service_directory_registrations": true,
+     "service_name": true,
+     "subnetwork": true,
+     "terraform_labels": {}
+    }
+   },
+   "index": "cp-probe",
+   "mode": "managed",
+   "module_address": "module.network",
+   "name": "endpoint",
+   "type": "google_compute_forwarding_rule"
+  },
+  {
+   "address": "module.network.google_compute_forwarding_rule.endpoint[\"dlp-proxy\"]",
+   "change": {
+    "actions": [
+     "create"
+    ],
+    "after": {
+     "all_ports": null,
+     "allow_global_access": null,
+     "allow_psc_global_access": null,
+     "backend_service": null,
+     "deletion_policy": "DELETE",
+     "description": null,
+     "effective_labels": {
+      "cost-center": "agentic-pdlc",
+      "managed-by": "platform-as-iac-repo",
+      "zone": "run"
+     },
+     "ip_collection": null,
+     "is_mirroring_collector": null,
+     "labels": null,
+     "load_balancing_scheme": "",
+     "name": "run-dlp-proxy",
+     "no_automate_dns_zone": null,
+     "ports": null,
+     "project": "example-pdlc-run",
+     "recreate_closed_psc": false,
+     "region": "europe-west9",
+     "service_label": null,
+     "source_ip_ranges": null,
+     "target": "projects/example-network-hub/regions/europe-west9/serviceAttachments/dlp-reverse-proxy",
+     "terraform_labels": {
+      "cost-center": "agentic-pdlc",
+      "managed-by": "platform-as-iac-repo",
+      "zone": "run"
+     },
+     "timeouts": null
+    },
+    "after_unknown": {
+     "base_forwarding_rule": true,
+     "creation_timestamp": true,
+     "effective_labels": {},
+     "forwarding_rule_id": true,
+     "id": true,
+     "ip_address": true,
+     "ip_protocol": true,
+     "ip_version": true,
+     "label_fingerprint": true,
+     "network": true,
+     "network_tier": true,
+     "port_range": true,
+     "psc_connection_id": true,
+     "psc_connection_status": true,
+     "self_link": true,
+     "service_directory_registrations": true,
+     "service_name": true,
+     "subnetwork": true,
+     "terraform_labels": {}
+    }
+   },
+   "index": "dlp-proxy",
+   "mode": "managed",
+   "module_address": "module.network",
+   "name": "endpoint",
+   "type": "google_compute_forwarding_rule"
+  },
+  {
+   "address": "module.network.google_compute_network.this",
+   "change": {
+    "actions": [
+     "create"
+    ],
+    "after": {
+     "auto_create_subnetworks": false,
+     "delete_bgp_always_compare_med": false,
+     "delete_default_routes_on_create": true,
+     "deletion_policy": "DELETE",
+     "description": null,
+     "enable_ula_internal_ipv6": null,
+     "name": "run",
+     "network_firewall_policy_enforcement_order": "AFTER_CLASSIC_FIREWALL",
+     "network_profile": null,
+     "params": [],
+     "project": "example-pdlc-run",
+     "routing_mode": "REGIONAL",
+     "timeouts": null
+    },
+    "after_unknown": {
+     "bgp_always_compare_med": true,
+     "bgp_best_path_selection_mode": true,
+     "bgp_inter_region_cost": true,
+     "gateway_ipv4": true,
+     "id": true,
+     "internal_ipv6_range": true,
+     "mtu": true,
+     "network_id": true,
+     "numeric_id": true,
+     "params": [],
+     "self_link": true
+    }
+   },
+   "mode": "managed",
+   "module_address": "module.network",
+   "name": "this",
+   "type": "google_compute_network"
+  },
+  {
+   "address": "module.network.google_compute_route.google_apis",
+   "change": {
+    "actions": [
+     "create"
+    ],
+    "after": {
+     "deletion_policy": "DELETE",
+     "description": null,
+     "dest_range": "199.36.153.8/30",
+     "name": "run-google-apis",
+     "network": "run",
+     "next_hop_gateway": "default-internet-gateway",
+     "next_hop_ilb": null,
+     "next_hop_instance": null,
+     "next_hop_vpn_tunnel": null,
+     "params": [],
+     "priority": 1000,
+     "project": "example-pdlc-run",
+     "tags": null,
+     "timeouts": null
+    },
+    "after_unknown": {
+     "as_paths": true,
+     "creation_timestamp": true,
+     "id": true,
+     "next_hop_hub": true,
+     "next_hop_instance_zone": true,
+     "next_hop_inter_region_cost": true,
+     "next_hop_ip": true,
+     "next_hop_med": true,
+     "next_hop_network": true,
+     "next_hop_origin": true,
+     "next_hop_peering": true,
+     "params": [],
+     "route_status": true,
+     "route_type": true,
+     "self_link": true,
+     "warnings": true
+    }
+   },
+   "mode": "managed",
+   "module_address": "module.network",
+   "name": "google_apis",
+   "type": "google_compute_route"
+  },
+  {
+   "address": "google_compute_service_attachment.release_api",
+   "change": {
+    "actions": [
+     "create"
+    ],
+    "after": {
+     "connection_preference": "ACCEPT_AUTOMATIC",
+     "name": "release-api",
+     "project": "example-pdlc-run"
+    },
+    "after_unknown": {}
+   },
+   "mode": "managed",
+   "name": "release_api",
+   "type": "google_compute_service_attachment"
+  }
+ ],
+ "variables": {
+  "control_plane_services": {
+   "value": {
+    "probe": "projects/example-pdlc-control/regions/europe-west9/serviceAttachments/probe"
+   }
+  },
+  "cost_center": {
+   "value": "agentic-pdlc"
+  },
+  "dlp_proxy": {
+   "value": {
+    "port": 3128,
+    "service_attachment": "projects/example-network-hub/regions/europe-west9/serviceAttachments/dlp-reverse-proxy"
+   }
+  },
+  "project_id": {
+   "value": "example-pdlc-run"
+  },
+  "region": {
+   "value": "europe-west9"
+  },
+  "subnets": {
+   "value": {
+    "endpoints": "10.31.16.0/24",
+    "workloads": "10.31.0.0/20"
+   }
+  }
+ }
+}

@@ -4,8 +4,10 @@
 #   - one runner group per zone, open to platform-as-iac-repo only (prints the IDs for bootstrap's tfvars)
 #   - environments control-plane, build, run: deployments from main only; run needs a second
 #     approver (Squad B lead or CoE security engineer, never the person who started the run)
-#   - ruleset on main: pull request, code-owner review, approval of the last push, checks-complete
+#   - ruleset platform-as-iac-repo-main on main: pull request, code-owner review, approval of
+#     the last push, checks-complete
 #   - ruleset on release tags (*-v*): only the platform lead and the squad leads create them
+#   - last, a check: every status check required on main is one that pull-request.yml reports
 # Usage: ORG=<org> [REPO=platform-as-iac-repo] bash scripts/configure-github.sh
 set -euo pipefail
 : "${ORG:?set ORG to your organization slug}"
@@ -56,20 +58,31 @@ for env in control-plane build run; do
 done
 
 echo "== rulesets"
-upsert_ruleset() {  # upsert_ruleset <name> <json>
-  local id
-  id=$(gh api "repos/$ORG/$REPO/rulesets" --jq ".[] | select(.name == \"$1\") | .id")
+# The ruleset on main is named after this repository, not "main". ruleset-main.json of
+# ci-reusable-workflows-and-composite-actions-repo is named "main", and the command that sends it
+# replaces the ruleset of that name: under the same name, a stray copy sent here would replace this
+# ruleset, and a rerun of this script would put it back without anyone noticing. Under its own
+# name, a stray copy is added beside this one instead, and the check at the end reports it.
+upsert_ruleset() {  # upsert_ruleset <name> <json> [<name an earlier version of this script used>]
+  local rulesets id found=$1
+  # includes_parents=false: this repository's own rulesets, not the organization's.
+  rulesets=$(gh api --paginate "repos/$ORG/$REPO/rulesets?includes_parents=false" | jq -s 'add // []')
+  id=$(jq -r --arg name "$1" 'map(select(.name == $name)) | first | .id // empty' <<< "$rulesets")
+  if [[ -z $id && -n ${3:-} ]]; then
+    found=$3
+    id=$(jq -r --arg name "$3" 'map(select(.name == $name)) | first | .id // empty' <<< "$rulesets")
+  fi
   if [[ -z $id ]]; then
     gh api -X POST "repos/$ORG/$REPO/rulesets" --input - --silent <<< "$2"
     echo "created  ruleset $1"
   else
     gh api -X PUT "repos/$ORG/$REPO/rulesets/$id" --input - --silent <<< "$2"
-    echo "updated  ruleset $1"
+    if [[ $found == "$1" ]]; then echo "updated  ruleset $1"; else echo "renamed  ruleset $found to $1"; fi
   fi
 }
 
-upsert_ruleset main "$(jq -n '{
-  name: "main", target: "branch", enforcement: "active", bypass_actors: [],
+upsert_ruleset platform-as-iac-repo-main "$(jq -n '{
+  name: "platform-as-iac-repo-main", target: "branch", enforcement: "active", bypass_actors: [],
   conditions: {ref_name: {include: ["~DEFAULT_BRANCH"], exclude: []}},
   rules: [
     {type: "deletion"},
@@ -81,7 +94,7 @@ upsert_ruleset main "$(jq -n '{
     {type: "required_status_checks", parameters: {
       strict_required_status_checks_policy: true,
       required_status_checks: [{context: "checks-complete"}]}}
-  ]}')"
+  ]}')" main
 
 release_bypass=$(for team in coe-platform-lead coe-squad-a-lead coe-squad-b-lead; do
   jq -n --argjson id "$(team_id "$team")" '{actor_id: $id, actor_type: "Team", bypass_mode: "always"}'
@@ -94,3 +107,21 @@ upsert_ruleset module-releases "$(jq -n --argjson bypass "$release_bypass" '{
 echo
 echo "bootstrap/terraform.tfvars:"
 echo "  runner_group_ids = { control-plane = ${group_ids[control-plane]}, build = ${group_ids[build]}, run = ${group_ids[run]} }"
+
+# Last, so the IDs above are printed whatever it finds. A ruleset in force on main, this
+# repository's or the organization's, can require a status check that no job here reports: the
+# five checks of ci-reusable-workflows-and-composite-actions-repo's ruleset-main.json (the jobs
+# of its self-test.yml), for instance. Every pull request would then wait for it forever.
+echo
+echo "== status checks required on main"
+reported='["affected roots", "static checks", "checks-complete"]' # the pull-request.yml jobs with no if:
+unreported=$(gh api --paginate "repos/$ORG/$REPO/rules/branches/main" | jq -rs --argjson reported "$reported" '
+  add // [] | .[] | select(.type == "required_status_checks") | . as $rule
+  | .parameters.required_status_checks[].context | select(IN($reported[]) | not)
+  | "  \"\(.)\": \($rule.ruleset_source_type // "?") ruleset \($rule.ruleset_id // "?") (\($rule.ruleset_source // "?"))"')
+if [[ -n $unreported ]]; then
+  echo "required on main, reported by no job of $REPO: every pull request would wait for them forever" >&2
+  echo "$unreported" >&2
+  exit 1
+fi
+echo "every status check required on main is reported by pull-request.yml"

@@ -7,7 +7,7 @@
 #     only from the local token broker (files/broker.py), which checks the job's GitHub OIDC token.
 
 module "runner_network" {
-  source = "git::https://github.com/platform-team/platform-as-iac-repo.git//modules/network?ref=network-v0.1.0"
+  source = "git::https://github.com/AGENTIC-AI-PDLC-PLATFORM/platform-as-iac-repo.git//modules/network?ref=network-v0.1.0"
 
   project_id      = var.project_id
   name            = "iac-runners"

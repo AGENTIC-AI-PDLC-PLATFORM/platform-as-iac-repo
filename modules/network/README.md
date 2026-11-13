@@ -11,4 +11,4 @@ Private network for one zone (or one runner pool), with egress-deny by default.
 | Firewall | Egress denied except to Google APIs and to the network's own subnets; no ingress from outside the network | C3, C5 |
 
 Used by `bootstrap/` (one runner network per project) and by every zone root, always through a
-release tag: `git::https://github.com/platform-team/platform-as-iac-repo.git//modules/network?ref=network-vX.Y.Z` (C9).
+release tag: `git::https://github.com/AGENTIC-AI-PDLC-PLATFORM/platform-as-iac-repo.git//modules/network?ref=network-vX.Y.Z` (C9).

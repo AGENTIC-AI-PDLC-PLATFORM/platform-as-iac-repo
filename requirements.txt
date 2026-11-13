@@ -1,0 +1,5 @@
+# Dependencies of the token broker (bootstrap/zone/files/broker.py) and its tests. CI installs
+# this file for the broker tests (pull-request.yml) and the org security scan audits it (pip-audit).
+# The runner VMs use Debian's python3-jwt and python3-cryptography (files/runner-startup.sh).
+pyjwt==2.15.1
+cryptography==50.0.2

@@ -1,0 +1,9 @@
+{
+ "build": "git::https://github.com/platform-team/platform-as-iac-repo.git//modules/data-plane?ref=main",
+ "releases": [
+  "data-plane-v0.1.0",
+  "data-plane-v0.2.0",
+  "data-plane-v0.3.0"
+ ],
+ "run": "git::https://github.com/platform-team/platform-as-iac-repo.git//modules/data-plane?ref=data-plane-v0.3.0"
+}

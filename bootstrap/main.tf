@@ -89,7 +89,7 @@ resource "google_logging_project_bucket_config" "audit" {
 # Guardrails, then APIs, in each project -----------------------------------------------------------
 
 module "baseline" {
-  source   = "git::https://github.com/platform-team/platform-as-iac-repo.git//modules/account-baseline?ref=account-baseline-v0.1.0"
+  source   = "git::https://github.com/AGENTIC-AI-PDLC-PLATFORM/platform-as-iac-repo.git//modules/account-baseline?ref=account-baseline-v0.1.0"
   for_each = var.projects
 
   project_id                         = local.project_ids[each.key]
