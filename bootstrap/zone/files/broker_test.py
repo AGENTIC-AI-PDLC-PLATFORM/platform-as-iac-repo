@@ -1,11 +1,17 @@
 """Unit tests of the token broker's checks (run in CI: python3 -m unittest discover -s bootstrap/zone/files -p '*_test.py')."""
+import json
+import os
+import threading
 import time
 import unittest
-
-import jwt
-from cryptography.hazmat.primitives.asymmetric import rsa
+import urllib.error
+import urllib.request
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from unittest import mock
 
 import broker
+import jwt
+from cryptography.hazmat.primitives.asymmetric import rsa
 
 CFG = {
     "zone": "run",
@@ -112,17 +118,18 @@ class BrokerHTTP(unittest.TestCase):
     """The HTTP surface: status codes, and no token minted unless the checks pass."""
 
     def setUp(self):
-        import json
-        import threading
-        import urllib.request
-
         self.json, self.request = json, urllib.request
-        self.minted, self.audited = [], []
+        self.minted: list[str] = []
+        self.audited: list[dict] = []
         self.saved = broker.mint, broker.audit
-        broker.mint = lambda sa: (self.minted.append(sa) or ("ya29.test-token", "2026-11-03T18:00:00Z"))
+
+        def fake_mint(service_account):
+            self.minted.append(service_account)
+            return "ya29.test-token", "2026-11-03T18:00:00Z"
+
+        broker.mint = fake_mint
         broker.audit = lambda cfg, entry: self.audited.append(entry)
-        self.server = broker.ThreadingHTTPServer(("127.0.0.1", 0), broker.Handler)
-        self.server.cfg, self.server.jwks = CFG, JWKS
+        self.server = broker.BrokerServer(("127.0.0.1", 0), CFG, JWKS)
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
         self.url = f"http://127.0.0.1:{self.server.server_address[1]}"
 
@@ -164,6 +171,67 @@ class BrokerHTTP(unittest.TestCase):
     def test_unknown_path_is_404(self):
         status, _ = self.post("/other", {"role": "plan", "token": token()})
         self.assertEqual(status, 404)
+
+
+class BrokerOutbound(unittest.TestCase):
+    """The broker's own requests (bandit B310): http and https only, sent as urlopen sent them."""
+
+    def setUp(self):
+        self.seen: list[dict] = []
+        seen = self.seen
+
+        class Upstream(BaseHTTPRequestHandler):
+            """Stands in for the metadata server (GET) and IAM Credentials (POST)."""
+
+            def do_GET(self):  # noqa: N802 (http.server API)
+                self.answer({"access_token": "vm-token"})
+
+            def do_POST(self):  # noqa: N802 (http.server API)
+                self.answer({"accessToken": "ya29.minted", "expireTime": "2026-11-03T18:00:00Z"})
+
+            def answer(self, body):
+                length = int(self.headers.get("Content-Length", "0"))
+                seen.append({"method": self.command, "path": self.path,
+                             "flavor": self.headers.get("Metadata-Flavor"),
+                             "authorization": self.headers.get("Authorization"),
+                             "body": self.rfile.read(length)})
+                data = json.dumps(body).encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+
+            def log_message(self, format, *args):  # noqa: A002 (http.server API)
+                pass
+
+        upstream = ThreadingHTTPServer(("127.0.0.1", 0), Upstream)
+        threading.Thread(target=upstream.serve_forever, daemon=True).start()
+        self.addCleanup(upstream.server_close)
+        self.addCleanup(upstream.shutdown)
+        url = f"http://127.0.0.1:{upstream.server_address[1]}"
+        # Reach the local server directly, as the runner reaches Google's APIs (no_proxy).
+        for patch in (
+            mock.patch.dict(os.environ, {"no_proxy": "127.0.0.1", "NO_PROXY": "127.0.0.1"}),
+            mock.patch.object(broker, "METADATA_TOKEN_URL", f"{url}/metadata/token"),
+            mock.patch.object(broker, "GENERATE_TOKEN_URL", f"{url}/iam/{{}}:generateAccessToken"),
+        ):
+            patch.start()
+            self.addCleanup(patch.stop)
+
+    def test_mint_asks_the_metadata_server_then_iam_credentials(self):
+        self.assertEqual(broker.mint("apply@example"), ("ya29.minted", "2026-11-03T18:00:00Z"))
+        get, post = self.seen
+        self.assertEqual((get["method"], get["path"], get["flavor"]),
+                         ("GET", "/metadata/token", "Google"))
+        self.assertEqual((post["method"], post["path"], post["authorization"]),
+                         ("POST", "/iam/apply@example:generateAccessToken", "Bearer vm-token"))
+        self.assertEqual(json.loads(post["body"])["lifetime"], "3600s")
+
+    def test_other_schemes_are_refused(self):
+        for url in ("file:///etc/hostname", "data:,x"):
+            with self.subTest(url=url), self.assertRaisesRegex(urllib.error.URLError, "unknown url type"):
+                broker.OPENER.open(url, timeout=1)
 
 
 if __name__ == "__main__":

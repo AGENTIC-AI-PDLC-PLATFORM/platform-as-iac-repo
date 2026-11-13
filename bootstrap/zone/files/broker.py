@@ -35,6 +35,30 @@ MAX_REQUEST_BYTES = 16384
 REQUIRED_CONFIG = ("zone", "project_id", "repository", "audience", "apply_workflow", "service_accounts")
 
 
+def http_opener():
+    """urlopen's handlers for http and https, and no others.
+
+    urlopen also opens file:, ftp: and data: URLs (bandit B310). This opener refuses them with
+    URLError("unknown url type"). For http and https it behaves as urlopen does, including the
+    proxy settings of the service unit (https_proxy, no_proxy).
+    """
+    opener = urllib.request.OpenerDirector()
+    for handler in (
+        urllib.request.ProxyHandler(),
+        urllib.request.UnknownHandler(),
+        urllib.request.HTTPHandler(),
+        urllib.request.HTTPSHandler(),
+        urllib.request.HTTPDefaultErrorHandler(),
+        urllib.request.HTTPRedirectHandler(),
+        urllib.request.HTTPErrorProcessor(),
+    ):
+        opener.add_handler(handler)
+    return opener
+
+
+OPENER = http_opener()
+
+
 class Denied(Exception):
     """The token does not entitle the job to the requested credentials."""
 
@@ -89,13 +113,13 @@ def _post_json(url, body, token):
         headers={"Content-Type": "application/json", "Authorization": f"Bearer {token}"},
         method="POST",
     )
-    with urllib.request.urlopen(request, timeout=20) as response:
+    with OPENER.open(request, timeout=20) as response:
         return json.load(response)
 
 
 def vm_token():
     request = urllib.request.Request(METADATA_TOKEN_URL, headers={"Metadata-Flavor": "Google"})
-    with urllib.request.urlopen(request, timeout=10) as response:
+    with OPENER.open(request, timeout=10) as response:
         return json.load(response)["access_token"]
 
 
@@ -128,8 +152,18 @@ def decision(cfg, role, claims, granted, reason=""):
     return entry
 
 
+class BrokerServer(ThreadingHTTPServer):
+    """The HTTP server, with what every request needs: the config and GitHub's signing keys."""
+
+    def __init__(self, address, cfg, jwks):
+        super().__init__(address, Handler)
+        self.cfg = cfg
+        self.jwks = jwks
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "platform-as-iac-repo-broker"
+    server: BrokerServer
 
     def do_POST(self):  # noqa: N802 (http.server API)
         cfg = self.server.cfg
@@ -182,9 +216,8 @@ class Handler(BaseHTTPRequestHandler):
 def main():
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     cfg = load_config()
-    server = ThreadingHTTPServer(("127.0.0.1", int(cfg.get("port", 8099))), Handler)
-    server.cfg = cfg
-    server.jwks = jwt.PyJWKClient(cfg.get("jwks_url", f"{GITHUB_ISSUER}/.well-known/jwks"))
+    jwks = jwt.PyJWKClient(cfg.get("jwks_url", f"{GITHUB_ISSUER}/.well-known/jwks"))
+    server = BrokerServer(("127.0.0.1", int(cfg.get("port", 8099))), cfg, jwks)
     logging.info("token broker for zone %s listening on 127.0.0.1:%s", cfg["zone"], cfg.get("port", 8099))
     server.serve_forever()
 
